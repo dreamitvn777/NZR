@@ -19,40 +19,42 @@ def scrape_toucan_docs():
         return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Tìm tất cả các link trên trang
     links = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True)]
 
     # Lưu nội dung của tất cả các link
-    all_content = ''
+    all_content = []
     for link in links:
         try:
             page_response = requests.get(link)
             if page_response.status_code == 200:
                 page_soup = BeautifulSoup(page_response.text, 'html.parser')
                 
-                # Lấy nội dung từ phần header và div đầu tiên theo XPath đã cho
+                # Lấy nội dung từ phần header và div đầu tiên
                 header_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > header')
                 main_div_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > div:nth-of-type(1)')
                 
-                # Tích lũy nội dung
                 if header_content:
-                    all_content += header_content.get_text(separator="\n") + "\n\n"
-                else:
-                    logging.warning(f"No header content found in {link}")
-
+                    all_content.extend(parse_content(header_content))
                 if main_div_content:
-                    all_content += main_div_content.get_text(separator="\n") + "\n\n"
-                else:
-                    logging.warning(f"No main div content found in {link}")
-
+                    all_content.extend(parse_content(main_div_content))
             else:
                 logging.warning(f"Failed to fetch {link}: {page_response.status_code}")
-            time.sleep(1)  # Tạm dừng 1 giây giữa các yêu cầu
+            time.sleep(1)
         except Exception as e:
             logging.error(f"Error fetching data from {link}: {e}")
 
     return all_content
+
+# Hàm để xử lý nội dung và phân loại theo tiêu đề
+def parse_content(content):
+    parsed_content = []
+    for element in content.descendants:
+        if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+            heading_level = int(element.name[1])
+            parsed_content.append({'text': element.get_text(separator="\n"), 'heading': heading_level})
+        elif element.name == 'p':
+            parsed_content.append({'text': element.get_text(separator="\n"), 'heading': None})
+    return parsed_content
 
 # Đường dẫn tới tệp JSON của tài khoản dịch vụ
 SERVICE_ACCOUNT_FILE = 'credentials.json'
@@ -67,9 +69,7 @@ docs_service = build('docs', 'v1', credentials=credentials)
 drive_service = build('drive', 'v3', credentials=credentials)
 
 # Tạo tài liệu mới
-document = {
-    'title': 'Nội dung từ Toucan Docs'
-}
+document = {'title': 'Nội dung từ Toucan Docs'}
 doc = docs_service.documents().create(body=document).execute()
 document_id = doc.get('documentId')
 
@@ -77,25 +77,32 @@ document_id = doc.get('documentId')
 content = scrape_toucan_docs()
 
 if content:
-    # Thêm nội dung vào tài liệu
-    requests = [
-        {'insertText': {'location': {'index': 1}, 'text': content}}
-    ]
+    requests = []
+    for item in content:
+        if item['heading']:
+            # Thêm nội dung tiêu đề với cấp độ heading
+            requests.append({
+                'insertText': {'location': {'index': 1}, 'text': item['text'] + "\n"}
+            })
+            requests.append({
+                'updateParagraphStyle': {
+                    'range': {'startIndex': 1, 'endIndex': 1 + len(item['text'])},
+                    'paragraphStyle': {'namedStyleType': f'HEADING_{item["heading"]}'},
+                    'fields': 'namedStyleType'
+                }
+            })
+        else:
+            # Thêm nội dung đoạn văn
+            requests.append({
+                'insertText': {'location': {'index': 1}, 'text': item['text'] + "\n"}
+            })
+    
     docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
     logging.info(f"Tài liệu đã được tạo với ID: {document_id}")
 
     # Chia sẻ tài liệu với email gốc
-    permission = {
-        'type': 'user',
-        'role': 'writer',
-        'emailAddress': 'bdpjournal@gmail.com'
-    }
-
-    drive_service.permissions().create(
-        fileId=document_id,
-        body=permission,
-        fields='id'
-    ).execute()
+    permission = {'type': 'user', 'role': 'writer', 'emailAddress': 'bdpjournal@gmail.com'}
+    drive_service.permissions().create(fileId=document_id, body=permission, fields='id').execute()
     logging.info(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
 else:
     logging.warning("Không có nội dung để thêm vào tài liệu.")
