@@ -27,14 +27,16 @@ def scrape_toucan_docs():
 
 # Hàm để gửi nội dung lên GitBook
 def upload_to_gitbook(title, content):
-    url = "https://api.gitbook.com/v1/spaces/sMgPr7gyzsesj3ivXAIT/contents"  # Kiểm tra lại endpoint
+    url = "https://api.gitbook.com/v1/spaces/YOUR_SPACE_ID/contents"  # Thay YOUR_SPACE_ID bằng ID không gian của bạn
     headers = {
-        "Authorization": "Bearer gb_api_oAvtSIG5tdvlmK7qrQEQQ8nrawdAf16BuNJ9TVZ9",
+        "Authorization": "Bearer gb_api_oAvtSIG5tdvlmK7qrQEQQ8nrawdAf16BuNJ9TVZ9",  # Đảm bảo token hợp lệ
         "Content-Type": "application/json"
     }
 
+    # Cấu trúc dữ liệu đúng với API GitBook
     data = {
         "title": title,
+        "type": "page",  # Đảm bảo rằng loại nội dung đúng
         "content": content
     }
 
