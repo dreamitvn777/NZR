@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+from googleapiclient.http import MediaInMemoryUpload
 from googleapiclient.errors import HttpError
 
 def scrape_toucan_docs(drive_service):
@@ -47,11 +48,11 @@ def scrape_page_content(page_url, drive_service):
         if not img_url.startswith('http'):
             img_url = 'https:' + img_url
         
-        # Thêm liên kết ảnh vào nội dung
+        # Thay vì chèn ảnh, chỉ thêm liên kết ảnh
         page_content.append({
             'insertText': {
                 'location': {'index': len(page_content)},
-                'text': f"![Image]({img_url})\n"
+                'text': f"[![Image]({img_url})]({img_url})\n"
             }
         })
 
@@ -90,8 +91,13 @@ def main():
     doc = docs_service.documents().create(body=document).execute()
     document_id = doc.get('documentId')
 
+    # Thêm một đoạn văn trống
+    docs_service.documents().batchUpdate(documentId=document_id, body={
+        'requests': [{'insertText': {'location': {'index': 1}, 'text': '\n'}}}
+    }).execute()
+
     content = scrape_toucan_docs(drive_service)
-    
+
     requests = []
     if content:
         requests.extend(content)
