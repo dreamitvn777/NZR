@@ -1,16 +1,16 @@
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-# Các phạm vi yêu cầu
+# Đường dẫn tới tệp JSON của tài khoản dịch vụ
+SERVICE_ACCOUNT_FILE = 'credentials.json'  # Thay thế bằng đường dẫn đến tệp JSON của bạn
 SCOPES = ['https://www.googleapis.com/auth/documents']
 
-# Xác thực và tạo dịch vụ
-flow = InstalledAppFlow.from_client_secrets_file(
-    'credentials.json', SCOPES)  # Thay thế bằng đường dẫn đến tệp JSON của bạn
-creds = flow.run_console()  # Sử dụng phương thức này để lấy mã xác thực qua console
+# Xác thực với tài khoản dịch vụ
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 # Tạo dịch vụ Google Docs
-service = build('docs', 'v1', credentials=creds)
+service = build('docs', 'v1', credentials=credentials)
 
 # Tạo tài liệu mới
 document = {
