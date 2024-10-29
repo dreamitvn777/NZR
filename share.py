@@ -13,7 +13,7 @@ creds = service_account.Credentials.from_service_account_file(
 service = build('drive', 'v3', credentials=creds)
 
 # ID tài liệu bạn đã tạo
-document_id = '1IVZEMwNRKumK9Ys64W3a5Zd7et5vVYQt0vA17LNDCMc'
+document_id = '1kgD7wKB-jSaHAyaOnFV-FqGUNBhpFKoYlYH88tAf3sg'
 
 # Chia sẻ tài liệu
 permission = {
