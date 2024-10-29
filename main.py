@@ -8,18 +8,20 @@ def scrape_toucan_docs():
 
     if response.status_code != 200:
         print(f"Error fetching data from {url}: {response.status_code}")
-        return None
+        return None, None
 
     soup = BeautifulSoup(response.content, "html.parser")
 
     # Lấy tiêu đề và nội dung
-    title = soup.title.string
+    title = soup.title.string if soup.title else "No title found"
     content = ""
     
     # Giả định rằng nội dung chính nằm trong thẻ <main>
     main_content = soup.find("main")
     if main_content:
         content = main_content.get_text(separator="\n", strip=True)
+    else:
+        print("No main content found")
 
     return title, content
 
@@ -47,3 +49,5 @@ if __name__ == "__main__":
     title, content = scrape_toucan_docs()
     if title and content:
         upload_to_gitbook(title, content)
+    else:
+        print("Failed to retrieve title or content.")
