@@ -123,7 +123,10 @@ def main():
             drive_service.permissions().create(fileId=document_id, body=permission).execute()
             print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
         else:
-            print("Không có nội dung nào để chèn vào tài liệu.")
+            # Thêm một đoạn văn trống nếu không có nội dung
+            empty_request = [{'insertText': {'location': {'index': 1}, 'text': '\n'}}]
+            docs_service.documents().batchUpdate(documentId=document_id, body={'requests': empty_request}).execute()
+            print("Không có nội dung nào để chèn vào tài liệu, đã thêm đoạn văn trống.")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
