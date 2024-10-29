@@ -2,7 +2,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
 # Đường dẫn tới tệp JSON của tài khoản dịch vụ
-SERVICE_ACCOUNT_FILE = 'NZR/credentials.json'
+SERVICE_ACCOUNT_FILE = 'credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/documents']
 
 # Xác thực với tài khoản dịch vụ
