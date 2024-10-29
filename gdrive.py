@@ -31,12 +31,21 @@ def scrape_toucan_docs():
             if page_response.status_code == 200:
                 page_soup = BeautifulSoup(page_response.text, 'html.parser')
                 
-                # Lấy nội dung từ phần theo XPath đã cho
-                main_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main')
-                if main_content:
-                    all_content += main_content.get_text(separator="\n") + "\n\n"  # Tích lũy nội dung
+                # Lấy nội dung từ phần header và div đầu tiên theo XPath đã cho
+                header_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > header')
+                main_div_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > div:nth-of-type(1)')
+                
+                # Tích lũy nội dung
+                if header_content:
+                    all_content += header_content.get_text(separator="\n") + "\n\n"
                 else:
-                    logging.warning(f"No main content found in {link}")
+                    logging.warning(f"No header content found in {link}")
+
+                if main_div_content:
+                    all_content += main_div_content.get_text(separator="\n") + "\n\n"
+                else:
+                    logging.warning(f"No main div content found in {link}")
+
             else:
                 logging.warning(f"Failed to fetch {link}: {page_response.status_code}")
             time.sleep(1)  # Tạm dừng 1 giây giữa các yêu cầu
