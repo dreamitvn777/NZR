@@ -2,20 +2,36 @@ import requests
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
-# Hàm để lấy nội dung từ trang web
+# Hàm để lấy tất cả các link từ trang chính
 def scrape_toucan_docs():
-    url = "https://docs.toucan.earth/"
-    response = requests.get(url)
+    base_url = "https://docs.toucan.earth/"
+    response = requests.get(base_url)
 
     if response.status_code != 200:
-        print(f"Error fetching data from {url}: {response.status_code}")
+        print(f"Error fetching data from {base_url}: {response.status_code}")
         return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
-    paragraphs = soup.find_all('p')
-    content = "\n".join([p.get_text() for p in paragraphs])  
-    return content
+
+    # Tìm tất cả các link trên trang
+    links = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True)]
+
+    # Lưu nội dung của tất cả các link
+    all_content = ''
+    for link in links:
+        try:
+            page_response = requests.get(link)
+            if page_response.status_code == 200:
+                page_soup = BeautifulSoup(page_response.text, 'html.parser')
+                paragraphs = page_soup.find_all('p')
+                content = "\n".join([p.get_text() for p in paragraphs])
+                all_content += content + "\n\n"  # Tích lũy nội dung
+        except Exception as e:
+            print(f"Error fetching data from {link}: {e}")
+
+    return all_content
 
 # Đường dẫn tới tệp JSON của tài khoản dịch vụ
 SERVICE_ACCOUNT_FILE = 'credentials.json'
@@ -36,7 +52,7 @@ document = {
 doc = docs_service.documents().create(body=document).execute()
 document_id = doc.get('documentId')
 
-# Lấy nội dung từ trang web
+# Lấy nội dung từ tất cả các link
 content = scrape_toucan_docs()
 
 if content:
