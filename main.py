@@ -102,4 +102,10 @@ def main():
             'emailAddress': 'bdpjournal@gmail.com'  # Thay đổi thành email gốc của bạn
         }
         drive_service.permissions().create(fileId=document_id, body=permission).execute()  # Sử dụng Drive API để tạo quyền
-        print(f"Tài liệu đã được chia sẻ với email: {permission['emailA
+        print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")  # Đã sửa ở đây
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+if __name__ == "__main__":
+    main()
