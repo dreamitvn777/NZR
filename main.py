@@ -37,7 +37,7 @@ def scrape_page_content(page_url):
     page_content = []
 
     # Bỏ qua nội dung có class cụ thể
-    for el in page_soup.find_all(class_="group/headerlogo flex-1 flex flex-row items-center shrink-0"):
+    for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
     # Xử lý hình ảnh
@@ -51,9 +51,13 @@ def scrape_page_content(page_url):
     # Xử lý Headings
     headers = page_soup.find_all(['h1', 'h2', 'h3'])
     for header in headers:
-        header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
         header_text = header.get_text(strip=True)
-        page_content.append(f"{'#' * int(header_level)} {header_text}\n")  # Thêm Heading
+        if header.name == 'h1':
+            page_content.append(f"Heading 1: {header_text}\n")  # Chuyển đổi thành "Heading 1"
+        elif header.name == 'h2':
+            page_content.append(f"Heading 2: {header_text}\n")  # Chuyển đổi thành "Heading 2"
+        elif header.name == 'h3':
+            page_content.append(f"Heading 3: {header_text}\n")  # Chuyển đổi thành "Heading 3"
 
     # Xử lý văn bản
     paragraphs = page_soup.find_all('p')
