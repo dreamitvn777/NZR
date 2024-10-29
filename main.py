@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaInMemoryUpload  # Thêm dòng này
 
 def scrape_toucan_docs():
     base_url = "https://docs.toucan.earth/"
