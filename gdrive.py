@@ -1,7 +1,7 @@
-import os.path
-import pickle
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
+import pickle
+import os
 
 # Các phạm vi cần thiết
 SCOPES = ['https://www.googleapis.com/auth/documents']
@@ -11,9 +11,9 @@ if os.path.exists('token.pickle'):
     with open('token.pickle', 'rb') as token:
         creds = pickle.load(token)
 else:
-    # Nếu không có, yêu cầu xác thực
     flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-    creds = flow.run_local_server(port=0)  # Sử dụng phương thức này để mở URL xác thực
+    # Sử dụng run_console để lấy mã xác thực
+    creds = flow.run_console()
 
     # Lưu thông tin xác thực để sử dụng sau này
     with open('token.pickle', 'wb') as token:
