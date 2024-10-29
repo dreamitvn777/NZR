@@ -108,4 +108,12 @@ def main():
                 'emailAddress': 'bdpjournal@gmail.com'  
             }
             drive_service.permissions().create(fileId=document_id, body=permission).execute()
-            print(f"Tài li
+            print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+        else:
+            print("Không có nội dung nào để chèn vào tài liệu.")
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+if __name__ == "__main__":
+    main()
