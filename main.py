@@ -21,9 +21,9 @@ def scrape_toucan_docs(drive_service):
             page_url = base_url + link['href'][1:]
             page_content = scrape_page_content(page_url, drive_service)
             if page_content:
-                content_list.extend(page_content)  # Extend to flatten the list
+                content_list.extend(page_content)  # Thay đổi từ append sang extend
 
-    return content_list  # Return the list directly
+    return content_list  # Trả về danh sách nội dung
 
 def scrape_page_content(page_url, drive_service):
     response = requests.get(page_url)
@@ -34,14 +34,14 @@ def scrape_page_content(page_url, drive_service):
     page_soup = BeautifulSoup(response.text, 'html.parser')
     page_content = []
 
-    # Extract unwanted elements
+    # Bỏ qua nội dung có class cụ thể
     for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
     for el in page_soup.find_all(class_="group/headerlogo flex-1 flex flex-row items-center shrink-0"):
         el.extract()
 
-    # Handle images
+    # Xử lý hình ảnh
     images = page_soup.find_all('img')
     for img in images:
         img_url = img['src']
@@ -59,7 +59,7 @@ def scrape_page_content(page_url, drive_service):
             image_id = img_file.get('id')
             page_content.append({
                 'insertInlineImage': {
-                    'location': {'index': len(page_content)},
+                    'location': {'index': len(page_content)},  # Vị trí chèn
                     'uri': f'https://drive.google.com/uc?id={image_id}',
                     'objectSize': {
                         'height': {'magnitude': 100, 'unit': 'PT'},
@@ -68,21 +68,25 @@ def scrape_page_content(page_url, drive_service):
                 }
             })
 
-    # Handle headings and text
+    # Xử lý Headings
     headers = page_soup.find_all(['h1', 'h2', 'h3'])
     for header in headers:
         header_level = header.name[1]
         header_text = header.get_text(strip=True)
         page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{'#' * int(header_level)} {header_text}\n"}})
 
-    # Handle paragraphs
+    # Xử lý văn bản
     paragraphs = page_soup.find_all('p')
     for para in paragraphs:
         para_text = para.get_text(strip=True)
         if para_text:
             page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{para_text}\n"}})
 
-    return page_content  # Return the list of requests directly
+    # Đảm bảo có một đoạn văn ban đầu để chèn văn bản
+    if not page_content:
+        page_content.append({'insertText': {'location': {'index': 1}, 'text': '\n'}})  # Bắt đầu với một đoạn trống
+
+    return page_content  # Trả về danh sách các yêu cầu trực tiếp
 
 def main():
     SERVICE_ACCOUNT_FILE = 'credentials.json'
