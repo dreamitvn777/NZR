@@ -1,16 +1,8 @@
 from googleapiclient.discovery import build
-from google.oauth2 import service_account
 
-# Đường dẫn tới tệp JSON của tài khoản dịch vụ
-SERVICE_ACCOUNT_FILE = 'credentials.json'
-SCOPES = ['https://www.googleapis.com/auth/documents']
-
-# Xác thực với tài khoản dịch vụ
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-
-# Tạo dịch vụ Google Docs
-service = build('docs', 'v1', credentials=credentials)
+# Sử dụng API Key của bạn
+API_KEY = 'AIzaSyBLU7xeTK_rrIywatvDGuEFCgeBWnBm23A'  # Thay thế bằng API Key của bạn
+service = build('docs', 'v1', developerKey=API_KEY)
 
 # Tạo tài liệu mới
 document = {
@@ -25,6 +17,5 @@ requests = [
     {'insertText': {'location': {'index': 1}, 'text': content}}
 ]
 
-# Cập nhật tài liệu với nội dung
 service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
 print(f"Tài liệu đã được tạo với ID: {document_id}")
