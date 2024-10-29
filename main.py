@@ -36,31 +36,35 @@ def scrape_page_content(page_url):
     page_soup = BeautifulSoup(response.text, 'html.parser')
     page_content = []
 
-    # Bỏ qua nội dung có class cụ thể
-    for el in page_soup.find_all(class="flex-1 text-sm text-dark/6 dark:text-light/5"):
-        el.extract()
+    # Tìm phần nội dung theo XPath đã cho
+    main_content = page_soup.select_one('div.main')  # Cập nhật selector phù hợp
 
-    # Xử lý hình ảnh
-    images = page_soup.find_all('img')
-    for img in images:
-        img_url = img['src']
-        if not img_url.startswith('http'):
-            img_url = 'https:' + img_url
-        page_content.append(f"![Image]({img_url})\n")  # Chèn ảnh
+    if main_content:
+        # Bỏ qua nội dung có class cụ thể
+        for el in main_content.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
+            el.extract()
 
-    # Xử lý Headings
-    headers = page_soup.find_all(['h1', 'h2', 'h3'])
-    for header in headers:
-        header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
-        header_text = header.get_text(strip=True)
-        page_content.append(f"{'#' * int(header_level)} {header_text}\n")  # Thêm Heading
+        # Xử lý hình ảnh
+        images = main_content.find_all('img')
+        for img in images:
+            img_url = img['src']
+            if not img_url.startswith('http'):
+                img_url = 'https:' + img_url
+            page_content.append(f"![Image]({img_url})\n")  # Chèn ảnh
 
-    # Xử lý văn bản
-    paragraphs = page_soup.find_all('p')
-    for para in paragraphs:
-        para_text = para.get_text(strip=True)
-        if para_text:  # Kiểm tra nếu đoạn văn không rỗng
-            page_content.append(f"{para_text}\n")
+        # Xử lý Headings
+        headers = main_content.find_all(['h1', 'h2', 'h3'])
+        for header in headers:
+            header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
+            header_text = header.get_text(strip=True)
+            page_content.append(f"{'#' * int(header_level)} {header_text}\n")  # Thêm Heading
+
+        # Xử lý văn bản
+        paragraphs = main_content.find_all('p')
+        for para in paragraphs:
+            para_text = para.get_text(strip=True)
+            if para_text:  # Kiểm tra nếu đoạn văn không rỗng
+                page_content.append(f"{para_text}\n")
 
     return "\n".join(page_content)
 
