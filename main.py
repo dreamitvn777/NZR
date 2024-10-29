@@ -37,7 +37,7 @@ def scrape_page_content(page_url):
     page_content = []
 
     # Bỏ qua nội dung có class cụ thể
-    for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
+    for el in page_soup.find_all(class="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
     # Xử lý hình ảnh
