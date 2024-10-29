@@ -1,6 +1,7 @@
 import requests
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from bs4 import BeautifulSoup  # Import BeautifulSoup here
 
 # Hàm để lấy nội dung từ trang web
 def scrape_toucan_docs():
@@ -52,15 +53,4 @@ if content:
     permission = {
         'type': 'user',
         'role': 'writer',  # Bạn có thể thay đổi thành 'reader' nếu chỉ muốn đọc
-        'emailAddress': 'bdpjournal@gmail.com'  # Thay đổi thành email gốc của bạn
-    }
-
-    drive_service.permissions().create(
-        fileId=document_id,
-        body=permission,
-        fields='id'
-    ).execute()
-
-    print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
-else:
-    print("Không có nội dung để thêm vào tài liệu.")
+       
