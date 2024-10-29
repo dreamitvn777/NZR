@@ -21,9 +21,9 @@ def scrape_toucan_docs(drive_service):
             page_url = base_url + link['href'][1:]
             page_content = scrape_page_content(page_url, drive_service)
             if page_content:
-                content_list.extend(page_content)  # Thay đổi từ append sang extend
+                content_list.extend(page_content)
 
-    return content_list  # Trả về danh sách nội dung
+    return content_list
 
 def scrape_page_content(page_url, drive_service):
     response = requests.get(page_url)
@@ -59,7 +59,7 @@ def scrape_page_content(page_url, drive_service):
             image_id = img_file.get('id')
             page_content.append({
                 'insertInlineImage': {
-                    'location': {'index': len(page_content)},  # Vị trí chèn
+                    'location': {'index': len(page_content)},
                     'uri': f'https://drive.google.com/uc?id={image_id}',
                     'objectSize': {
                         'height': {'magnitude': 100, 'unit': 'PT'},
@@ -82,11 +82,11 @@ def scrape_page_content(page_url, drive_service):
         if para_text:
             page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{para_text}\n"}})
 
-    # Đảm bảo có một đoạn văn ban đầu để chèn văn bản
+    # Thêm đoạn văn trống nếu không có nội dung
     if not page_content:
-        page_content.append({'insertText': {'location': {'index': 1}, 'text': '\n'}})  # Bắt đầu với một đoạn trống
+        page_content.append({'insertText': {'location': {'index': 1}, 'text': '\n'}}) 
 
-    return page_content  # Trả về danh sách các yêu cầu trực tiếp
+    return page_content
 
 def main():
     SERVICE_ACCOUNT_FILE = 'credentials.json'
@@ -110,16 +110,20 @@ def main():
         requests.extend(content)
 
     try:
-        docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-        print(f"Tài liệu đã được tạo với ID: {document_id}")
+        # Đảm bảo rằng có ít nhất một đoạn văn để chèn vào
+        if requests:
+            docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+            print(f"Tài liệu đã được tạo với ID: {document_id}")
 
-        permission = {
-            'type': 'user',
-            'role': 'writer',
-            'emailAddress': 'bdpjournal@gmail.com'  
-        }
-        drive_service.permissions().create(fileId=document_id, body=permission).execute()
-        print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+            permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': 'bdpjournal@gmail.com'  
+            }
+            drive_service.permissions().create(fileId=document_id, body=permission).execute()
+            print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+        else:
+            print("Không có nội dung nào để chèn vào tài liệu.")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
