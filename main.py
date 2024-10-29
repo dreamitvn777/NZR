@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-from googleapiclient.http import MediaInMemoryUpload
 from googleapiclient.errors import HttpError
 
 def scrape_toucan_docs(drive_service):
@@ -48,25 +47,13 @@ def scrape_page_content(page_url, drive_service):
         if not img_url.startswith('http'):
             img_url = 'https:' + img_url
         
-        img_response = requests.get(img_url)
-        if img_response.status_code == 200:
-            file_metadata = {
-                'name': img_url.split('/')[-1],
-                'mimeType': 'image/jpeg'
+        # Thêm liên kết ảnh vào nội dung
+        page_content.append({
+            'insertText': {
+                'location': {'index': len(page_content)},
+                'text': f"![Image]({img_url})\n"
             }
-            media = MediaInMemoryUpload(img_response.content, mimetype='image/jpeg')
-            img_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-            image_id = img_file.get('id')
-            page_content.append({
-                'insertInlineImage': {
-                    'location': {'index': len(page_content)},
-                    'uri': f'https://drive.google.com/uc?id={image_id}',
-                    'objectSize': {
-                        'height': {'magnitude': 100, 'unit': 'PT'},
-                        'width': {'magnitude': 100, 'unit': 'PT'},
-                    }
-                }
-            })
+        })
 
     # Xử lý Headings
     headers = page_soup.find_all(['h1', 'h2', 'h3'])
@@ -121,15 +108,4 @@ def main():
                 'emailAddress': 'bdpjournal@gmail.com'  
             }
             drive_service.permissions().create(fileId=document_id, body=permission).execute()
-            print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
-        else:
-            # Thêm một đoạn văn trống nếu không có nội dung
-            empty_request = [{'insertText': {'location': {'index': 1}, 'text': '\n'}}]
-            docs_service.documents().batchUpdate(documentId=document_id, body={'requests': empty_request}).execute()
-            print("Không có nội dung nào để chèn vào tài liệu, đã thêm đoạn văn trống.")
-
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-
-if __name__ == "__main__":
-    main()
+            print(f"Tài li
