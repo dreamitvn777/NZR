@@ -1,55 +1,94 @@
 import requests
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+import re
 
-# Hàm để lấy nội dung từ trang web
+# Hàm để lấy tất cả các link từ trang chính
 def scrape_toucan_docs():
-    url = "https://docs.toucan.earth/"
-    response = requests.get(url)
+    base_url = "https://docs.toucan.earth/"
+    response = requests.get(base_url)
 
     if response.status_code != 200:
-        print(f"Error fetching data from {url}: {response.status_code}")
-        return None, None
+        print(f"Error fetching data from {base_url}: {response.status_code}")
+        return None
 
-    soup = BeautifulSoup(response.content, "html.parser")
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Lấy tiêu đề và nội dung
-    title = soup.title.string if soup.title else "No title found"
-    content = ""
-    
-    # Giả định rằng nội dung chính nằm trong thẻ <main>
-    main_content = soup.find("main")
-    if main_content:
-        content = main_content.get_text(separator="\n", strip=True)
-    else:
-        print("No main content found")
+    # Tìm tất cả các link trên trang
+    links = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True)]
 
-    return title, content
+    # Lưu nội dung của tất cả các link
+    all_content = ''
+    for link in links:
+        try:
+            page_response = requests.get(link)
+            if page_response.status_code == 200:
+                page_soup = BeautifulSoup(page_response.text, 'html.parser')
 
-# Hàm để gửi nội dung lên GitBook
-def upload_to_gitbook(title, content):
-    url = "https://api.gitbook.com/v1/spaces/fIM6QujbfhsNUfWQsQYG/contents"  # Thay YOUR_SPACE_ID bằng ID không gian của bạn
-    headers = {
-        "Authorization": "Bearer gb_api_5ZoA46F2gJqESyzB99U7hZXxcGm0oLSeihpTdu7K",  # Đảm bảo token hợp lệ
-        "Content-Type": "application/json"
+                # Xóa phần "Last updated" và thời gian
+                for element in page_soup.find_all(text=re.compile(r'Last updated')):
+                    element.extract()
+
+                # Tạo cấu trúc với Headings
+                all_content += f"\n\n\n# {page_soup.title.string.strip()}\n"  # Thêm tiêu đề của trang
+                headers = page_soup.find_all(['h1', 'h2', 'h3'])
+                for header in headers:
+                    header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
+                    header_text = header.get_text(strip=True)
+                    all_content += f"{'#' * int(header_level)} {header_text}\n"  # Thêm Heading
+                    # Thêm nội dung từ các đoạn văn
+                paragraphs = page_soup.find_all('p')
+                content = "\n".join([p.get_text() for p in paragraphs if 'Last updated' not in p.get_text()])
+                all_content += content + "\n\n"  # Tích lũy nội dung
+        except Exception as e:
+            print(f"Error fetching data from {link}: {e}")
+
+    return all_content
+
+# Đường dẫn tới tệp JSON của tài khoản dịch vụ
+SERVICE_ACCOUNT_FILE = 'credentials.json'
+SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
+
+# Xác thực với tài khoản dịch vụ
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+
+# Tạo dịch vụ Google Docs và Google Drive
+docs_service = build('docs', 'v1', credentials=credentials)
+drive_service = build('drive', 'v3', credentials=credentials)
+
+# Tạo tài liệu mới
+document = {
+    'title': 'Nội dung từ Toucan Docs'
+}
+doc = docs_service.documents().create(body=document).execute()
+document_id = doc.get('documentId')
+
+# Lấy nội dung từ tất cả các link
+content = scrape_toucan_docs()
+
+if content:
+    # Thêm nội dung vào tài liệu
+    requests = [
+        {'insertText': {'location': {'index': 1}, 'text': content}}
+    ]
+    docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    print(f"Tài liệu đã được tạo với ID: {document_id}")
+
+    # Chia sẻ tài liệu với email gốc
+    permission = {
+        'type': 'user',
+        'role': 'writer',
+        'emailAddress': 'bdpjournal@gmail.com'
     }
 
-    # Cấu trúc dữ liệu đúng với API GitBook
-    data = {
-        "title": title,
-        "type": "page",  # Đảm bảo rằng loại nội dung đúng
-        "content": content
-    }
-
-    response = requests.post(url, json=data, headers=headers)
-
-    if response.status_code == 200:
-        print("Successfully uploaded to GitBook!")
-    else:
-        print(f"Failed to upload to GitBook: {response.status_code}, {response.text}")
-
-if __name__ == "__main__":
-    title, content = scrape_toucan_docs()
-    if title and content:
-        upload_to_gitbook(title, content)
-    else:
-        print("Failed to retrieve title or content.")
+    drive_service.permissions().create(
+        fileId=document_id,
+        body=permission,
+        fields='id'
+    ).execute()
+    print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+else:
+    print("Không có nội dung để thêm vào tài liệu.")
