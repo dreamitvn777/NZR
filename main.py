@@ -36,8 +36,8 @@ def scrape_page_content(page_url):
     page_soup = BeautifulSoup(response.text, 'html.parser')
     page_content = []
 
-    # Bỏ qua nội dung "Last updated"
-    for el in page_soup.find_all(text=lambda text: "Last updated" in text):
+    # Bỏ qua nội dung có class cụ thể
+    for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
     # Xử lý hình ảnh
