@@ -67,18 +67,20 @@ def scrape_page_content(page_url):
 def main():
     # Đường dẫn tới tệp JSON của tài khoản dịch vụ
     SERVICE_ACCOUNT_FILE = 'credentials.json'  # Thay thế bằng đường dẫn đến tệp JSON của bạn
-    SCOPES = ['https://www.googleapis.com/auth/documents']
+    SCOPES = ['https://www.googleapis.com/auth/documents',
+              'https://www.googleapis.com/auth/drive']  # Thêm quyền truy cập Google Drive
 
     # Xác thực với tài khoản dịch vụ
     credentials = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-    service = build('docs', 'v1', credentials=credentials)
+    docs_service = build('docs', 'v1', credentials=credentials)
+    drive_service = build('drive', 'v3', credentials=credentials)  # Tạo đối tượng service cho Google Drive
 
     # Tạo tài liệu mới
     document = {
         'title': 'Nội dung từ Toucan Docs'
     }
-    doc = service.documents().create(body=document).execute()
+    doc = docs_service.documents().create(body=document).execute()
     document_id = doc.get('documentId')
 
     # Lấy nội dung từ trang web
@@ -90,7 +92,7 @@ def main():
         requests.append({'insertText': {'location': {'index': 1}, 'text': content}})
 
     try:
-        service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+        docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
         print(f"Tài liệu đã được tạo với ID: {document_id}")
 
         # Chia sẻ tài liệu
@@ -99,11 +101,5 @@ def main():
             'role': 'writer',
             'emailAddress': 'bdpjournal@gmail.com'  # Thay đổi thành email gốc của bạn
         }
-        service.permissions().create(fileId=document_id, body=permission).execute()
-        print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
-
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-
-if __name__ == "__main__":
-    main()
+        drive_service.permissions().create(fileId=document_id, body=permission).execute()  # Sử dụng Drive API để tạo quyền
+        print(f"Tài liệu đã được chia sẻ với email: {permission['emailA
