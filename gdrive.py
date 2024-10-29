@@ -1,8 +1,16 @@
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-# Sử dụng API Key của bạn
-API_KEY = 'AIzaSyBLU7xeTK_rrIywatvDGuEFCgeBWnBm23A'  # Thay thế bằng API Key của bạn
-service = build('docs', 'v1', developerKey=API_KEY)
+# Các phạm vi yêu cầu
+SCOPES = ['https://www.googleapis.com/auth/documents']
+
+# Xác thực và tạo dịch vụ
+flow = InstalledAppFlow.from_client_secrets_file(
+    'credentials.json', SCOPES)  # Thay thế bằng đường dẫn đến tệp JSON của bạn
+creds = flow.run_local_server(port=0)  # Mở trình duyệt để xác thực
+
+# Tạo dịch vụ Google Docs
+service = build('docs', 'v1', credentials=creds)
 
 # Tạo tài liệu mới
 document = {
