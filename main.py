@@ -4,6 +4,8 @@ from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import re
+import io
+import base64
 
 # Hàm để lấy tất cả các link từ trang chính
 def scrape_toucan_docs():
@@ -20,7 +22,7 @@ def scrape_toucan_docs():
     links = [urljoin(base_url, a['href']) for a in soup.find_all('a', href=True)]
 
     # Lưu nội dung của tất cả các link
-    all_content = ''
+    all_content = []
     for link in links:
         try:
             page_response = requests.get(link)
@@ -32,20 +34,62 @@ def scrape_toucan_docs():
                     element.extract()
 
                 # Tạo cấu trúc với Headings
-                all_content += f"\n\n\n# {page_soup.title.string.strip()}\n"  # Thêm tiêu đề của trang
+                page_content = []
+                page_content.append(f"\n\n\n# {page_soup.title.string.strip()}\n")  # Thêm tiêu đề của trang
                 headers = page_soup.find_all(['h1', 'h2', 'h3'])
                 for header in headers:
                     header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
                     header_text = header.get_text(strip=True)
-                    all_content += f"{'#' * int(header_level)} {header_text}\n"  # Thêm Heading
-                    # Thêm nội dung từ các đoạn văn
+                    page_content.append(f"{'#' * int(header_level)} {header_text}\n")  # Thêm Heading
+                
+                # Thêm nội dung từ các đoạn văn
                 paragraphs = page_soup.find_all('p')
-                content = "\n".join([p.get_text() for p in paragraphs if 'Last updated' not in p.get_text()])
-                all_content += content + "\n\n"  # Tích lũy nội dung
+                for p in paragraphs:
+                    paragraph_text = p.get_text(strip=True)
+                    page_content.append(paragraph_text + "\n")
+
+                # Thêm hình ảnh và lưu vào danh sách
+                images = page_soup.find_all('img')
+                image_urls = []
+                for img in images:
+                    img_url = urljoin(base_url, img['src'])
+                    image_urls.append(img_url)
+                    page_content.append(f"![Image]({img_url})\n")  # Thêm ảnh
+
+                all_content.append(''.join(page_content))  # Tích lũy nội dung của từng trang
+
+                # Chèn ảnh vào tài liệu
+                for img_url in image_urls:
+                    insert_image_to_doc(img_url, doc, page_content)  # Chèn ảnh vào doc
+            else:
+                print(f"Failed to retrieve {link}: {page_response.status_code}")
         except Exception as e:
             print(f"Error fetching data from {link}: {e}")
 
-    return all_content
+    return '\n'.join(all_content)
+
+# Hàm chèn hình ảnh vào tài liệu Google Docs
+def insert_image_to_doc(image_url, document_id, page_content):
+    try:
+        image_response = requests.get(image_url)
+        if image_response.status_code == 200:
+            # Chuyển đổi hình ảnh thành base64
+            base64_image = base64.b64encode(image_response.content).decode('utf-8')
+            image_index = page_content.index(f"![Image]({image_url})")  # Tìm vị trí chèn
+            requests = [
+                {
+                    'insertInlineImage': {
+                        'location': {'index': image_index},
+                        'uri': f'data:image/jpeg;base64,{base64_image}',
+                        'objectSize': {'height': {'magnitude': 100, 'unit': 'PT'}, 'width': {'magnitude': 100, 'unit': 'PT'}}
+                    }
+                }
+            ]
+            docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+        else:
+            print(f"Failed to retrieve image from {image_url}: {image_response.status_code}")
+    except Exception as e:
+        print(f"Error inserting image {image_url}: {e}")
 
 # Đường dẫn tới tệp JSON của tài khoản dịch vụ
 SERVICE_ACCOUNT_FILE = 'credentials.json'
@@ -71,11 +115,8 @@ content = scrape_toucan_docs()
 
 if content:
     # Thêm nội dung vào tài liệu
-    requests = [
-        {'insertText': {'location': {'index': 1}, 'text': content}}
-    ]
+    requests = [{'insertText': {'location': {'index': 1}, 'text': content}}]
     docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-    print(f"Tài liệu đã được tạo với ID: {document_id}")
 
     # Chia sẻ tài liệu với email gốc
     permission = {
@@ -89,6 +130,7 @@ if content:
         body=permission,
         fields='id'
     ).execute()
-    print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+    print(f"Tài liệu đã được tạo với ID: {document_id} và đã được chia sẻ với email: {permission['emailAddress']}")
+
 else:
     print("Không có nội dung để thêm vào tài liệu.")
