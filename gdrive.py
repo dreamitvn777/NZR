@@ -31,45 +31,50 @@ def scrape_toucan_docs():
             if page_response.status_code == 200:
                 page_soup = BeautifulSoup(page_response.text, 'html.parser')
                 
-                # Lấy nội dung từ phần div theo yêu cầu
-                main_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main')
+                # Lấy nội dung từ phần header và div đầu tiên theo XPath đã cho
+                header_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > header')
+                main_div_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main > div:nth-of-type(1)')
                 
-                if main_content:
-                    for element in main_content.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']):
-                        # Xác định cấp độ Heading dựa vào thẻ HTML
-                        if element.name.startswith('h') and element.name[1].isdigit():
-                            heading_level = int(element.name[1])  # Lấy cấp độ heading từ thẻ
-                            if 1 <= heading_level <= 6:
-                                # Thêm phần nội dung dưới dạng Heading tương ứng
-                                content_requests.append({
-                                    'insertText': {
-                                        'location': {'index': 1},
-                                        'text': element.get_text() + "\n\n"
-                                    }
-                                })
-                                content_requests.append({
-                                    'updateParagraphStyle': {
-                                        'range': {
-                                            'startIndex': 1,
-                                            'endIndex': 1 + len(element.get_text()) + 2
-                                        },
-                                        'paragraphStyle': {
-                                            'namedStyleType': f'HEADING_{heading_level}'
-                                        },
-                                        'fields': 'namedStyleType'
-                                    }
-                                })
-                        elif element.name == 'p':
-                            # Thêm đoạn văn bản bình thường
-                            content_requests.append({
-                                'insertText': {
-                                    'location': {'index': 1},
-                                    'text': element.get_text() + "\n\n"
-                                }
-                            })
-                else:
-                    logging.warning(f"No main content found in {link}")
+                # Thêm nội dung vào tài liệu với định dạng Heading tương ứng
+                if header_content:
+                    content_requests.append({
+                        'insertText': {
+                            'location': {'index': 1},
+                            'text': header_content.get_text() + "\n\n"
+                        }
+                    })
+                    content_requests.append({
+                        'updateParagraphStyle': {
+                            'range': {
+                                'startIndex': 1,
+                                'endIndex': 1 + len(header_content.get_text()) + 2
+                            },
+                            'paragraphStyle': {
+                                'namedStyleType': 'HEADING_1'
+                            },
+                            'fields': 'namedStyleType'
+                        }
+                    })
 
+                if main_div_content:
+                    content_requests.append({
+                        'insertText': {
+                            'location': {'index': 1},
+                            'text': main_div_content.get_text() + "\n\n"
+                        }
+                    })
+                    content_requests.append({
+                        'updateParagraphStyle': {
+                            'range': {
+                                'startIndex': 1,
+                                'endIndex': 1 + len(main_div_content.get_text()) + 2
+                            },
+                            'paragraphStyle': {
+                                'namedStyleType': 'HEADING_2'
+                            },
+                            'fields': 'namedStyleType'
+                        }
+                    })
             else:
                 logging.warning(f"Failed to fetch {link}: {page_response.status_code}")
             time.sleep(1)  # Tạm dừng 1 giây giữa các yêu cầu
