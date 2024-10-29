@@ -1,26 +1,16 @@
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-import pickle
-import os
+from google.oauth2 import service_account
 
-# Các phạm vi cần thiết
+# Đường dẫn tới tệp JSON của tài khoản dịch vụ
+SERVICE_ACCOUNT_FILE = 'NZR/credentials.json'
 SCOPES = ['https://www.googleapis.com/auth/documents']
 
-# Kiểm tra xem có tệp token.pickle không
-if os.path.exists('token.pickle'):
-    with open('token.pickle', 'rb') as token:
-        creds = pickle.load(token)
-else:
-    flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-    # Sử dụng run_console để lấy mã xác thực
-    creds = flow.run_console()
-
-    # Lưu thông tin xác thực để sử dụng sau này
-    with open('token.pickle', 'wb') as token:
-        pickle.dump(creds, token)
+# Xác thực với tài khoản dịch vụ
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
 # Tạo dịch vụ Google Docs
-service = build('docs', 'v1', credentials=creds)
+service = build('docs', 'v1', credentials=credentials)
 
 # Tạo tài liệu mới
 document = {
@@ -36,4 +26,4 @@ requests = [
 ]
 
 service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-print(f"Tài liệu đã được tạo với ID: {document_id}")
+print(f"Tài liệu đã được tạo với ID: {1Tc4yx9bFLJ2YZ80D5ZP1HuaXWg4iLXAYM7EAsIZt19k}")
