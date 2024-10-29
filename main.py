@@ -40,33 +40,53 @@ def scrape_page_content(page_url):
     for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
+    # Bỏ qua nội dung có class cụ thể
+    for el in page_soup.find_all(class_="group/headerlogo flex-1 flex flex-row items-center shrink-0"):
+        el.extract()
+
     # Xử lý hình ảnh
     images = page_soup.find_all('img')
     for img in images:
         img_url = img['src']
         if not img_url.startswith('http'):
             img_url = 'https:' + img_url
-        page_content.append(f"![Image]({img_url})\n")  # Chèn ảnh
+        
+        # Tải hình ảnh lên Google Drive
+        img_response = requests.get(img_url)
+        if img_response.status_code == 200:
+            file_metadata = {
+                'name': img_url.split('/')[-1],
+                'mimeType': 'image/jpeg'
+            }
+            media = MediaInMemoryUpload(img_response.content, mimetype='image/jpeg')
+            img_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            image_id = img_file.get('id')
+            page_content.append({
+                'insertInlineImage': {
+                    'location': {'index': len(page_content)},
+                    'uri': f'https://drive.google.com/uc?id={image_id}',
+                    'objectSize': {
+                        'height': {'magnitude': 100, 'unit': 'PT'},
+                        'width': {'magnitude': 100, 'unit': 'PT'},
+                    }
+                }
+            })
 
     # Xử lý Headings
     headers = page_soup.find_all(['h1', 'h2', 'h3'])
     for header in headers:
+        header_level = header.name[1]  # Lấy cấp độ từ tên thẻ (h1, h2, h3)
         header_text = header.get_text(strip=True)
-        if header.name == 'h1':
-            page_content.append(f"Heading 1: {header_text}\n")  # Chuyển đổi thành "Heading 1"
-        elif header.name == 'h2':
-            page_content.append(f"Heading 2: {header_text}\n")  # Chuyển đổi thành "Heading 2"
-        elif header.name == 'h3':
-            page_content.append(f"Heading 3: {header_text}\n")  # Chuyển đổi thành "Heading 3"
+        page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{'#' * int(header_level)} {header_text}\n"}})  # Thêm Heading
 
     # Xử lý văn bản
     paragraphs = page_soup.find_all('p')
     for para in paragraphs:
         para_text = para.get_text(strip=True)
         if para_text:  # Kiểm tra nếu đoạn văn không rỗng
-            page_content.append(f"{para_text}\n")
+            page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{para_text}\n"}})
 
-    return "\n".join(page_content)
+    return page_content
 
 def main():
     # Đường dẫn tới tệp JSON của tài khoản dịch vụ
@@ -93,7 +113,7 @@ def main():
     # Thêm nội dung vào tài liệu
     requests = []
     if content:
-        requests.append({'insertText': {'location': {'index': 1}, 'text': content}})
+        requests.extend(content)  # Thêm từng yêu cầu vào requests
 
     try:
         docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
@@ -106,7 +126,7 @@ def main():
             'emailAddress': 'bdpjournal@gmail.com'  # Thay đổi thành email gốc của bạn
         }
         drive_service.permissions().create(fileId=document_id, body=permission).execute()  # Sử dụng Drive API để tạo quyền
-        print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")  # Đã sửa ở đây
+        print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
 
     except HttpError as error:
         print(f"An error occurred: {error}")
