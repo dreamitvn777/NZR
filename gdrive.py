@@ -1,8 +1,13 @@
 import requests
+import time
+import logging
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+
+# Thiết lập logging
+logging.basicConfig(level=logging.INFO)
 
 # Hàm để lấy tất cả các link từ trang chính
 def scrape_toucan_docs():
@@ -10,7 +15,7 @@ def scrape_toucan_docs():
     response = requests.get(base_url)
 
     if response.status_code != 200:
-        print(f"Error fetching data from {base_url}: {response.status_code}")
+        logging.error(f"Error fetching data from {base_url}: {response.status_code}")
         return None
 
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -25,11 +30,18 @@ def scrape_toucan_docs():
             page_response = requests.get(link)
             if page_response.status_code == 200:
                 page_soup = BeautifulSoup(page_response.text, 'html.parser')
-                paragraphs = page_soup.find_all('p')
-                content = "\n".join([p.get_text() for p in paragraphs])
-                all_content += content + "\n\n"  # Tích lũy nội dung
+                
+                # Lấy nội dung từ phần theo XPath đã cho
+                main_content = page_soup.select_one('body > div:nth-of-type(1) > div > div > div > main')
+                if main_content:
+                    all_content += main_content.get_text(separator="\n") + "\n\n"  # Tích lũy nội dung
+                else:
+                    logging.warning(f"No main content found in {link}")
+            else:
+                logging.warning(f"Failed to fetch {link}: {page_response.status_code}")
+            time.sleep(1)  # Tạm dừng 1 giây giữa các yêu cầu
         except Exception as e:
-            print(f"Error fetching data from {link}: {e}")
+            logging.error(f"Error fetching data from {link}: {e}")
 
     return all_content
 
@@ -61,7 +73,7 @@ if content:
         {'insertText': {'location': {'index': 1}, 'text': content}}
     ]
     docs_service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-    print(f"Tài liệu đã được tạo với ID: {document_id}")
+    logging.info(f"Tài liệu đã được tạo với ID: {document_id}")
 
     # Chia sẻ tài liệu với email gốc
     permission = {
@@ -75,6 +87,6 @@ if content:
         body=permission,
         fields='id'
     ).execute()
-    print(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
+    logging.info(f"Tài liệu đã được chia sẻ với email: {permission['emailAddress']}")
 else:
-    print("Không có nội dung để thêm vào tài liệu.")
+    logging.warning("Không có nội dung để thêm vào tài liệu.")
