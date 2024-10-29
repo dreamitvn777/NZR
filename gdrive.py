@@ -7,7 +7,7 @@ SCOPES = ['https://www.googleapis.com/auth/documents']
 # Xác thực và tạo dịch vụ
 flow = InstalledAppFlow.from_client_secrets_file(
     'credentials.json', SCOPES)  # Thay thế bằng đường dẫn đến tệp JSON của bạn
-creds = flow.run_local_server(port=0)  # Mở trình duyệt để xác thực
+creds = flow.run_console()  # Sử dụng phương thức này để lấy mã xác thực qua console
 
 # Tạo dịch vụ Google Docs
 service = build('docs', 'v1', credentials=creds)
