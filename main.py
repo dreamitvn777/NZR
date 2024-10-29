@@ -21,28 +21,27 @@ def scrape_toucan_docs(drive_service):
             page_url = base_url + link['href'][1:]
             page_content = scrape_page_content(page_url, drive_service)
             if page_content:
-                content_list.append(page_content)
+                content_list.extend(page_content)  # Extend to flatten the list
 
-    return "\n".join(content_list)
+    return content_list  # Return the list directly
 
 def scrape_page_content(page_url, drive_service):
     response = requests.get(page_url)
     if response.status_code != 200:
         print(f"Error fetching data from {page_url}: {response.status_code}")
-        return None
+        return []
 
     page_soup = BeautifulSoup(response.text, 'html.parser')
     page_content = []
 
-    # Bỏ qua nội dung có class cụ thể
+    # Extract unwanted elements
     for el in page_soup.find_all(class_="flex-1 text-sm text-dark/6 dark:text-light/5"):
         el.extract()
 
-    # Bỏ qua nội dung có class cụ thể
     for el in page_soup.find_all(class_="group/headerlogo flex-1 flex flex-row items-center shrink-0"):
         el.extract()
 
-    # Xử lý hình ảnh
+    # Handle images
     images = page_soup.find_all('img')
     for img in images:
         img_url = img['src']
@@ -69,21 +68,21 @@ def scrape_page_content(page_url, drive_service):
                 }
             })
 
-    # Xử lý Headings
+    # Handle headings and text
     headers = page_soup.find_all(['h1', 'h2', 'h3'])
     for header in headers:
         header_level = header.name[1]
         header_text = header.get_text(strip=True)
         page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{'#' * int(header_level)} {header_text}\n"}})
 
-    # Xử lý văn bản
+    # Handle paragraphs
     paragraphs = page_soup.find_all('p')
     for para in paragraphs:
         para_text = para.get_text(strip=True)
         if para_text:
             page_content.append({'insertText': {'location': {'index': len(page_content)}, 'text': f"{para_text}\n"}})
 
-    return page_content
+    return page_content  # Return the list of requests directly
 
 def main():
     SERVICE_ACCOUNT_FILE = 'credentials.json'
