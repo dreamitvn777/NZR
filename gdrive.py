@@ -25,5 +25,6 @@ requests = [
     {'insertText': {'location': {'index': 1}, 'text': content}}
 ]
 
+# Cập nhật tài liệu với nội dung
 service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
-print(f"Tài liệu đã được tạo với ID: {1Tc4yx9bFLJ2YZ80D5ZP1HuaXWg4iLXAYM7EAsIZt19k}")
+print(f"Tài liệu đã được tạo với ID: {document_id}")
